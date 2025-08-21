@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hyperspherical"
+version = "0.1.0"
+description = "Hyperspherical neural network layers for PyTorch"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Christophe Saint-Jean", email = "christophe.saint-jean@univ-lr.fr" }
+]
+dependencies = [
+    "torch>=2.0",
+    "numpy",
+]
+
+[project.urls]
+Homepage = "https://github.com/christophesaintjean/hyperspherical"
+Documentation = "https://christophesaintjean.github.io/hyperspherical"
+Issues = "https://github.com/christophesaintjean/hyperspherical/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 88
+target-version = ["py39"]
