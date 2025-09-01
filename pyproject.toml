@@ -26,5 +26,13 @@ Issues = "https://github.com/christophesaintjean/hyperspherical/issues"
 testpaths = ["tests"]
 
 [tool.black]
-line-length = 88
-target-version = ["py39"]
+line-length = 100
+target-version = ["py313"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "hypothesis",
+    "flake8",
+    "black",
+]
