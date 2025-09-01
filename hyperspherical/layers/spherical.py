@@ -43,11 +43,11 @@ class Spherical(nn.Module):
         if callable(self.init_method):
             self.init_method(self.spheres, **self.init_args)
         elif self.init_method == 'random':
-
-            # TODO: La méthode d'initialisation intelligente ici
-            x_ = x.view(-1)
-
-            self.initialized = True
+            #TODO: implement a better random initialization
+        elif self.init_method == 'kmeans':
+            from hyperspherical.initializers import kmeans_
+            kmeans_(self.spheres, x)
+        self.initialized = True
 
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
