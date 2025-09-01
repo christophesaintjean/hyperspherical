@@ -20,5 +20,5 @@ pip install .
 ```
 avec uv :
 ```bash
-uv pip install -e .
+uv pip install .
 ```
