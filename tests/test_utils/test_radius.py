@@ -1,17 +1,15 @@
 import torch
+
 from hyperspherical.utils import (
-    spheres_radii,
+    conformal_point,
     conformal_sphere,
     sphere_squared_radius,
-    conformal_point,
+    spheres_radii,
 )
 
 
 def test_sphere_radius():
-    centers = torch.tensor([[0.0, 0.0],
-                            [1.0, 1.0],
-                            [2.0, 2.0],
-                            [-1.0, 3.0]])
+    centers = torch.tensor([[0.0, 0.0], [1.0, 1.0], [2.0, 2.0], [-1.0, 3.0]])
     radii = torch.tensor([1.0, 2.0, 3.0, 10.0])
     spheres = conformal_sphere(centers, radii)
     computed_radii = spheres_radii(spheres)
@@ -19,10 +17,7 @@ def test_sphere_radius():
 
 
 def test_sphere_squared_radius():
-    centers = torch.tensor([[0.0, 0.0],
-                            [1.0, 1.0],
-                            [2.0, 2.0],
-                            [-1.0, 3.0]])
+    centers = torch.tensor([[0.0, 0.0], [1.0, 1.0], [2.0, 2.0], [-1.0, 3.0]])
     radii = torch.tensor([1.0, 2.0, 3.0, 10.0])
     spheres = conformal_sphere(centers, radii)
     computed_radii = sphere_squared_radius(spheres)
@@ -30,8 +25,7 @@ def test_sphere_squared_radius():
 
 
 def test_sphere_radius_zero_radius():
-    centers = torch.tensor([[0.0, 0.0],
-                            [1.0, 1.0]])
+    centers = torch.tensor([[0.0, 0.0], [1.0, 1.0]])
     radii = torch.tensor([0.0, 0.0])
     spheres = conformal_sphere(centers, radii)
     computed_radii = spheres_radii(spheres)
@@ -39,5 +33,3 @@ def test_sphere_radius_zero_radius():
 
     points = conformal_point(centers)
     assert torch.allclose(points, spheres, atol=1e-5)
-
-

@@ -1,34 +1,32 @@
 import numpy as np
 import torch
-from torch import Tensor
 from sklearn.cluster import KMeans
+from torch import Tensor
 
 
-
-def default_(spheres: Tensor,
-             data: Tensor | np.ndarray,
-             **kwargs) -> Tensor:
+def default_(spheres: Tensor, data: Tensor | np.ndarray, **kwargs) -> bool:
     """
     Default initialization method for spheres.
     Initializes spheres with random centers and unit with propagation garanteed.
     :param spheres: Tensor of shape (k, n + 1) where k is the number of spheres and n is the dimension.
     :param data: Input data tensor of shape (m, n) where m is the number of samples.
     :param kwargs: Additional arguments
-    :return: Initialized spheres tensor of shape (k, n + 1).
+    :return: Whether or not the spheres were initialized.
+
     """
-    n = spheres.size(1) - 1  # dimension of the spheres
-    j = spheres.size(0)      # number of spheres
+    # TODO: La méthode d'initialisation intelligente ici
+    # n = spheres.size(1) - 1  # dimension of the spheres
+    # j = spheres.size(0)  # number of spheres
+    return False
 
-    #TODO: La méthode d'initialisation intelligente ici
-    return spheres
 
-def kmeans_(spheres: Tensor,
-            data: Tensor | np.ndarray,
-            **kwargs) -> Tensor:
+def kmeans_(spheres: Tensor, data: Tensor | np.ndarray, **kwargs) -> bool:
     """
     KMeans initialization method for spheres.
     :param spheres: Tensor of shape (k, n + 1) where k is the number of spheres and n is the dimension.
     :param data: Input data tensor of shape (m, n) where m is the number of samples.
+    :param kwargs: Additional arguments for sklearn KMeans.
+    :return: Whether or not the spheres were initialized.
     """
     if data is None:
         raise ValueError("Data must be provided for KMeans initialization.")
@@ -61,17 +59,16 @@ def kmeans_(spheres: Tensor,
             radii[i] = 1.0  # Default radius if no points in cluster
     spheres[:, :-1] = torch.tensor(centers, dtype=spheres.dtype, device=spheres.device)
     spheres[:, -1] = 0.5 * (
-            torch.sum(spheres[:, :-1] ** 2, dim=1) -
-            torch.tensor(radii ** 2, dtype=spheres.dtype, device=spheres.device)
+        torch.sum(spheres[:, :-1] ** 2, dim=1)
+        - torch.tensor(radii**2, dtype=spheres.dtype, device=spheres.device)
     )
     spheres.requires_grad = is_requires_grad
     return True
 
 
-def random_(spheres: Tensor,
-            data: Tensor | np.ndarray = None,
-            radius: float = 1.0,
-            **kwargs) -> Tensor:
+def random_(
+    spheres: Tensor, data: Tensor | np.ndarray = None, radius: float = 1.0, **kwargs
+) -> bool:
     """
     Random initialization method for spheres.
     Initializes spheres with random centers and specified radius.
@@ -79,14 +76,14 @@ def random_(spheres: Tensor,
     :param data: Input data tensor of shape (m, n) where m is the number of samples. (Not used here)
     :param radius: Radius to initialize the spheres with.
     :param kwargs: Additional arguments
-    :return: Initialized spheres tensor of shape (k, n + 1).
+    :return: Whether or not the spheres were initialized.
     """
     n = spheres.size(1) - 1  # dimension of the spheres
-    j = spheres.size(0)      # number of spheres
+    j = spheres.size(0)  # number of spheres
 
     centers = torch.randn(j, n, dtype=spheres.dtype, device=spheres.device)
     radii = torch.full((j,), radius, dtype=spheres.dtype, device=spheres.device)
 
     spheres[:, :-1] = centers
-    spheres[:, -1] = 0.5 * (torch.sum(centers ** 2, dim=1) - radii ** 2)
+    spheres[:, -1] = 0.5 * (torch.sum(centers**2, dim=1) - radii**2)
     return True

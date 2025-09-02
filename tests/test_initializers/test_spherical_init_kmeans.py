@@ -1,5 +1,6 @@
 import pytest
 import torch
+
 from hyperspherical.initializers.spherical_init import kmeans_
 from hyperspherical.utils import spheres_radii
 
@@ -7,7 +8,7 @@ from hyperspherical.utils import spheres_radii
 def test_kmeans():
     data = torch.randn(100, 3)
     spheres = torch.empty(5, 4)
-    assert(kmeans_(spheres, data))
+    assert kmeans_(spheres, data)
     centers = spheres[:, :-1]
     radii = spheres_radii(spheres)
     assert torch.isfinite(centers).all()
@@ -30,4 +31,3 @@ def test_kmeans_number_of_clusters(n_clusters, n_samples):
     spheres = torch.empty(n_clusters, 5)
     _ = kmeans_(spheres, data)
     assert spheres.size(0) == n_clusters
-
