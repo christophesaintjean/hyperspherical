@@ -61,10 +61,14 @@ jobs:
 
       #  🔟 (Optionnel) Publier sur PyPI si c’est main et tag et le secret est défini
       - name: Publish to PyPI
-        if: github.ref_type == 'tag' && secrets.PYPI_API_TOKEN != ''
+        if: github.ref_type == 'tag'
         env:
-          TWINE_USERNAME: __token__          # obligatoire pour API token PyPI
+          TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          python -m build                  # génère dist/ (wheel + sdist)
-          twine upload dist/*               # publie sur PyPI
+          if [ -z "$TWINE_PASSWORD" ]; then
+            echo "PYPI_API_TOKEN not set, skipping upload."
+            exit 0
+          fi
+          python -m build
+          twine upload dist/*
