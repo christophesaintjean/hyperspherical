@@ -44,6 +44,7 @@ target-version = "py313"
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "pytest-cov",
     "hypothesis",
     "black",
     "isort",
