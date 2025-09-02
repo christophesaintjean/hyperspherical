@@ -42,14 +42,13 @@ jobs:
 
       # 7️⃣ Lancer les tests et générer coverage
       - name: Run tests with coverage
-        run: pytest --cov=hyperspherical --cov-report=xml --maxfail=1 --disable-warnings -q
+        run: pytest --cov=hyperspherical --cov-branch --cov-report=xml --maxfail=1 --disable-warnings -q
 
       # 8️⃣ Upload coverage to Codecov
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
-          files: ./coverage.xml
-          fail_ci_if_error: true
+            token: ${{ secrets.CODECOV_TOKEN }}
 
       # 9️⃣ Build (préparation pour PyPI)
       - name: Build distribution
