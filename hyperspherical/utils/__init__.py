@@ -53,8 +53,16 @@ def sphere_radius(spheres: torch.Tensor) -> torch.Tensor:
     :param sphere: Tensor of shape (..., n + 1) representing the conformal sphere.
     :return: Tensor of shape (...) representing the radius of the sphere.
     """
-    #TODO: optimize this function with einsum
-    return torch.sqrt(torch.diag(conformal_product(spheres, spheres)))
+    return torch.sqrt(sphere_squared_radius(spheres).clamp(min=0.0))
+
+def sphere_squared_radius(spheres: torch.Tensor) -> torch.Tensor:
+    """
+    Compute the squared radius of a conformal sphere.
+    :param sphere: Tensor of shape (..., n + 1) representing the conformal sphere.
+    :return: Tensor of shape (...) representing the radius of the sphere.
+    """
+    norm_sq = torch.einsum("...i,...i->...", spheres[..., :-1], spheres[..., :-1])
+    return norm_sq - 2 * spheres[..., -1]
 
 def sphere_center(spheres: torch.Tensor) -> torch.Tensor:
     """
