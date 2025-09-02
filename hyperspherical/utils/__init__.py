@@ -4,8 +4,8 @@ __all__ = [
     'conformal_point',
     'conformal_sphere',
     'conformal_product',
-    'sphere_radius',
-    'sphere_center'
+    'spheres_radii',
+    'spheres_centers'
 ]
 
 def conformal_point(x: torch.Tensor) -> torch.Tensor:
@@ -30,13 +30,13 @@ def conformal_sphere(center: torch.Tensor, radius: float | torch.FloatTensor) ->
     einf = 0.5 * (p_squared - torch.square(radius))
     return torch.cat((center, einf.unsqueeze(-1)), dim=-1)
 
-def conformal_center(sphere: torch.Tensor) -> torch.Tensor:
+def conformal_center(spheres: torch.Tensor) -> torch.Tensor:
     """
     Extract the center of a conformal sphere.
-    :param sphere: Tensor of shape (..., n + 1) representing the conformal sphere.
-    :return: Tensor of shape (..., n+1) representing the center of the sphere.
+    :param spheres: Tensor of shape (..., n + 1) representing the conformal spheres.
+    :return: Tensor of shape (..., n+1) representing the centers of the spheres.
     """
-    return conformal_point(sphere[..., :-1])
+    return conformal_point(spheres[..., :-1])
 
 def conformal_product(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     """
@@ -45,17 +45,18 @@ def conformal_product(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     :param y: Tensor of shape (..., n + 1).
     :return: Tensor of shape (..., n) representing the conformal product.
     """
-    return torch.einsum('...si,...bi->...bs', x[..., :-1], y[..., :-1]) - x[..., -1].view(1, -1) - y[..., [-1]]
+    ps = torch.einsum('...si,...bi->...bs', x[..., :-1], y[..., :-1])
+    return  ps - x[..., -1].view(1, -1) - y[..., [-1]]
 
-def sphere_radius(spheres: torch.Tensor) -> torch.Tensor:
+def spheres_radii(spheres: torch.Tensor) -> torch.Tensor:
     """
     Compute the radius of a conformal sphere.
     :param sphere: Tensor of shape (..., n + 1) representing the conformal sphere.
     :return: Tensor of shape (...) representing the radius of the sphere.
     """
-    return torch.sqrt(sphere_squared_radius(spheres).clamp(min=0.0))
+    return torch.sqrt(spheres_squared_radii(spheres).clamp(min=0.0))
 
-def sphere_squared_radius(spheres: torch.Tensor) -> torch.Tensor:
+def spheres_squared_radii(spheres: torch.Tensor) -> torch.Tensor:
     """
     Compute the squared radius of a conformal sphere.
     :param sphere: Tensor of shape (..., n + 1) representing the conformal sphere.
@@ -64,7 +65,7 @@ def sphere_squared_radius(spheres: torch.Tensor) -> torch.Tensor:
     norm_sq = torch.einsum("...i,...i->...", spheres[..., :-1], spheres[..., :-1])
     return norm_sq - 2 * spheres[..., -1]
 
-def sphere_center(spheres: torch.Tensor) -> torch.Tensor:
+def spheres_centers(spheres: torch.Tensor) -> torch.Tensor:
     """
     Extract the center of a conformal sphere.
     :param sphere: Tensor of shape (..., n + 1) representing the conformal sphere.

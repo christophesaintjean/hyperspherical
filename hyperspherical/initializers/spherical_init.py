@@ -23,7 +23,8 @@ def default_(spheres: Tensor,
     return spheres
 
 def kmeans_(spheres: Tensor,
-            data: Tensor | np.ndarray) -> Tensor:
+            data: Tensor | np.ndarray,
+            **kwargs) -> Tensor:
     """
     KMeans initialization method for spheres.
     :param spheres: Tensor of shape (k, n + 1) where k is the number of spheres and n is the dimension.
@@ -46,7 +47,7 @@ def kmeans_(spheres: Tensor,
         raise ValueError(f"Data features must match the sphere dimensions: {data.shape[1]} != {n}.")
     is_requires_grad = spheres.requires_grad
 
-    Kmeans = KMeans(n_clusters=j, random_state=0).fit(data)
+    Kmeans = KMeans(n_clusters=j, **kwargs).fit(data)
     centers = Kmeans.cluster_centers_
     labels = Kmeans.labels_
     radii = np.zeros(j)
@@ -64,4 +65,28 @@ def kmeans_(spheres: Tensor,
             torch.tensor(radii ** 2, dtype=spheres.dtype, device=spheres.device)
     )
     spheres.requires_grad = is_requires_grad
-    return spheres
+    return True
+
+
+def random_(spheres: Tensor,
+            data: Tensor | np.ndarray = None,
+            radius: float = 1.0,
+            **kwargs) -> Tensor:
+    """
+    Random initialization method for spheres.
+    Initializes spheres with random centers and specified radius.
+    :param spheres: Tensor of shape (k, n + 1) where k is the number of spheres and n is the dimension.
+    :param data: Input data tensor of shape (m, n) where m is the number of samples. (Not used here)
+    :param radius: Radius to initialize the spheres with.
+    :param kwargs: Additional arguments
+    :return: Initialized spheres tensor of shape (k, n + 1).
+    """
+    n = spheres.size(1) - 1  # dimension of the spheres
+    j = spheres.size(0)      # number of spheres
+
+    centers = torch.randn(j, n, dtype=spheres.dtype, device=spheres.device)
+    radii = torch.full((j,), radius, dtype=spheres.dtype, device=spheres.device)
+
+    spheres[:, :-1] = centers
+    spheres[:, -1] = 0.5 * (torch.sum(centers ** 2, dim=1) - radii ** 2)
+    return True
