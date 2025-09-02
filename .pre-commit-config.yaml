@@ -3,6 +3,7 @@ repos:
     rev: 25.1.0
     hooks:
       - id: black
+        args: [--line-length=100]
 
   - repo: https://github.com/pre-commit/mirrors-isort
     rev: v5.10.1
@@ -13,5 +14,4 @@ repos:
     rev: v0.12.11
     hooks:
       - id: ruff
-      - id: ruff-format
-        args: [--exit-non-zero-on-fix]
+        args: [--fix]

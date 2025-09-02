@@ -2,28 +2,69 @@ name: CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "develop"]
   pull_request:
 
 jobs:
-  lint:
+  build-lint-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
     steps:
+      # 1️⃣ Checkout du code
       - uses: actions/checkout@v4
 
+      # 2️⃣ Setup Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python-version }}
 
-      - name: Install tools
-        run: pip install black isort ruff
+      # 3️⃣ Installer les dépendances
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[dev] black isort ruff pytest pytest-cov build twine
 
-      - name: Run Black
-        run: black --check --diff .
+      # 4️⃣ Vérifier le formatage Black
+      - name: Black check
+        run: black --check .
 
-      - name: Run isort
-        run: isort --check-only --diff .
+      # 5️⃣ Vérifier les imports avec isort
+      - name: isort check
+        run: isort --check-only .
 
-      - name: Run Ruff
+      # 6️⃣ Linter et corriger avec Ruff
+      - name: Ruff check
         run: ruff check .
+
+      # 7️⃣ Lancer les tests et générer coverage
+      - name: Run tests with coverage
+        run: pytest --cov=hyperspherical --cov-report=xml --maxfail=1 --disable-warnings -q
+
+      # 8️⃣ Upload coverage to Codecov
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: true
+
+      # 9️⃣ Build (préparation pour PyPI)
+      - name: Build distribution
+        run: python -m build
+
+      # Afficher le contenu du dossier dist
+      - name: List dist folder
+        run: ls -lh dist/
+
+      #  🔟 (Optionnel) Publier sur PyPI si c’est main et tag et le secret est défini
+      - name: Publish to PyPI
+        if: github.ref_type == 'tag' && secrets.PYPI_API_TOKEN != ''
+        env:
+          TWINE_USERNAME: __token__          # obligatoire pour API token PyPI
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          python -m build                  # génère dist/ (wheel + sdist)
+          twine upload dist/*               # publie sur PyPI

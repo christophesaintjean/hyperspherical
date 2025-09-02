@@ -27,7 +27,7 @@ testpaths = ["tests"]
 
 [tool.black]
 line-length = 100
-target-version = ["py39", "py310", "py311", "py312", "py313"]
+target-version = ["py313"]
 
 [tool.isort]
 profile = "black"
@@ -39,18 +39,11 @@ combine_as_imports = true
 line-length = 100
 target-version = "py313"
 
-[tool.ruff.lint]
-select = ["E", "W", "F", "I"]   # erreurs, warnings, flake8, imports
-ignore = ["E501"]               # on laisse Black gérer les longueurs de ligne
-
-
-[tool.flake8]
-max-line-length = 100
-
 [project.optional-dependencies]
 dev = [
     "pytest",
     "hypothesis",
-    "flake8",
     "black",
+    "isort",
+    "ruff"
 ]
