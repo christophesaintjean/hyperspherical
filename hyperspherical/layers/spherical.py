@@ -47,29 +47,12 @@ class Spherical(nn.Module):
         if not callable(self.init_method):
             raise TypeError("init_method must be callable.")
 
-        res, paramsph = self.init_method(self.spheres, x, **self.init_args)
+        res = self.init_method(self.spheres, x, delta=self.delta, **self.init_args)
 
-        if isinstance(paramsph, dict):
-            required_keys = {"rhos", "centers"}
-            if not required_keys.issubset(paramsph):
-                raise ValueError(f"paramsph must contain {required_keys}, got {paramsph.keys()}")
+        if not res:
+            raise RuntimeError("Initialization method failed.")
 
-            rhos, centers = paramsph["rhos"], paramsph["centers"]
-
-            # spheres's parameters are initialized with the provided values
-            with torch.no_grad():
-                # set sphere parameters
-                self.spheres[:, :-1] = centers
-                p_squared = (self.spheres[:, :-1] ** 2).sum(dim=-1)
-                self.spheres[:, -1] = 0.5 * (p_squared - rhos**2)
-
-                # if delta is provided, override the default
-                if "delta" in paramsph:
-                    self.delta.copy_(
-                        torch.as_tensor(paramsph["delta"], dtype=self.spheres.dtype, device=self.spheres.device)
-                    )
-
-        self.initialized = res is not None
+        self.initialized = True
 
     def forward(self, x: Tensor) -> Tensor:
         """

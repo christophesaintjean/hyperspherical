@@ -3,8 +3,7 @@ import torch
 from sklearn.cluster import KMeans
 from torch import Tensor
 
-
-def default_(spheres: Tensor, data: Tensor | np.ndarray, **kwargs) -> bool:
+def default_(spheres: Tensor, data: Tensor | np.ndarray, eps: float = 1e-6, **kwargs) -> bool:
     """
     Default initialization method for spheres.
     Initializes spheres with random centers and unit with propagation garanteed.
@@ -14,10 +13,63 @@ def default_(spheres: Tensor, data: Tensor | np.ndarray, **kwargs) -> bool:
     :return: Whether or not the spheres were initialized.
 
     """
-    # TODO: La méthode d'initialisation intelligente ici
-    # n = spheres.size(1) - 1  # dimension of the spheres
-    # j = spheres.size(0)  # number of spheres
-    return False
+    if data is None:
+        raise ValueError("Data must be provided for initialization.")
+    elif isinstance(data, Tensor) and data.numel() == 0:
+        raise ValueError("Data must be provided for initialization.")
+    elif isinstance(data, np.ndarray) and data.size == 0:
+        raise ValueError("Data must be provided for initialization.")
+    elif (isinstance(data, Tensor) and data.dim() != 2) or (isinstance(data, np.ndarray) and data.ndim != 2):
+        raise ValueError("Data must be 2D (n_samples, n_features).")
+
+    if isinstance(data, Tensor):
+        data_np = data.detach().cpu().numpy()
+    else:
+        data_np = data
+
+    assert isinstance(data_np, np.ndarray)
+
+    n = spheres.size(1) - 1  # dimension of the spheres
+    j = spheres.size(0)  # number of spheres
+    if data_np.shape[1] != n:
+        raise ValueError(f"Data features must match the sphere dimensions: {data_np.shape[1]} != {n}")
+
+    # Required buffer delta
+    if "delta" not in kwargs:
+        raise ValueError("delta must be passed via kwargs.")
+    delta_buf: Tensor = kwargs["delta"]
+
+    mu_x, sigma_x = np.mean(data_np), np.std(data_np)
+
+    # Constants
+    C = (j / np.sqrt(n)) - eps
+    delta = np.sqrt(((j**2) * n * (sigma_x**2)) / (2 * ((j**2) - (C**2 * n))))
+
+    # Upper bound for mu_s (same for all spheres)
+    upper_mu_s1 = mu_x + np.sqrt((delta**2 / n) - (sigma_x**2 / 2))
+    upper_mu_s2 = mu_x + (delta / j)
+    mu_s = min(upper_mu_s1, upper_mu_s2) - eps
+
+    # sigma_s² and rhos
+    sig_s2 = -((mu_s - mu_x) ** 2 + sigma_x ** 2) + np.sqrt((mu_x - mu_s) ** 4 + (2 * (delta ** 2 / n) * sigma_x ** 2))
+    rhos = np.sqrt(n * (sigma_x ** 2 + sig_s2 + (mu_x - mu_s) ** 2) + 2 * delta * mu_x)
+
+    # Generate centers c (Gaussian sampling)
+    cs = np.random.normal(mu_s, np.sqrt(sig_s2), (j, n))
+
+    # Fill spheres and update delta in place (torch only)
+    with torch.no_grad():
+        centers_t = torch.tensor(cs, dtype=spheres.dtype, device=spheres.device)
+        rhos_t = torch.tensor(rhos, dtype=spheres.dtype, device=spheres.device)
+
+        spheres[:, :-1] = centers_t
+        p_squared = (spheres[:, :-1] ** 2).sum(dim=-1)
+        spheres[:, -1] = 0.5 * (p_squared - rhos_t ** 2)
+
+        delta_buf.copy_(torch.tensor(delta, dtype=spheres.dtype, device=spheres.device))
+
+    return True
+
 
 
 def kmeans_(spheres: Tensor, data: Tensor | np.ndarray, **kwargs) -> bool:
@@ -87,42 +139,4 @@ def random_(
     spheres[:, :-1] = centers
     spheres[:, -1] = 0.5 * (torch.sum(centers**2, dim=1) - radii**2)
     return True
-
-
-def sph_init_methode(spheres: Tensor, data: Tensor | np.ndarray, **kwargs) -> tuple[bool, dict]:
-    """
-    Initialization of spheres using the proposed methode
-    :param spheres: tensor representing the spheres
-    :param data: input data (Tensor or ndarray)
-    :return: (True, dictionary containing rhos, centers and delta)
-    """
-
-    # Convert data to numpy if tensor
-    data_np = data.clone().detach().cpu().numpy() if isinstance(data, Tensor) else np.asarray(data)
-    mu_x, sigma_x = np.mean(data_np), np.std(data_np)
-    n = data_np.shape[1]
-    num_sph = spheres.size(0)
-
-    # Constants
-    eps = 1e-6
-    C = (num_sph / np.sqrt(n)) - eps
-    delta = np.sqrt(((num_sph**2) * n * (sigma_x**2)) / (2 * ((num_sph**2) - (C**2 * n))))
-
-    # Upper bound for mu_s (same for all spheres)
-    upper_mu_s1 = mu_x + np.sqrt((delta**2 / n) - (sigma_x**2 / 2))
-    upper_mu_s2 = mu_x + (delta / num_sph)
-    mu_s = min(upper_mu_s1, upper_mu_s2) - eps
-
-    # sigma_s² and rhos
-    sig_s2 = -((mu_s - mu_x) ** 2 + sigma_x ** 2) + np.sqrt((mu_x - mu_s) ** 4 + (2 * (delta ** 2 / n) * sigma_x ** 2))
-    rhos = np.sqrt(n * (sigma_x ** 2 + sig_s2 + (mu_x - mu_s) ** 2) + 2 * delta * mu_x)
-
-    # Generate centers c (Gaussian sampling)
-    cs = np.random.normal(mu_s, np.sqrt(sig_s2), (num_sph, n))
-
-    return True, {
-        "rhos": torch.tensor(rhos, dtype=torch.float32),
-        "centers": torch.tensor(cs, dtype=torch.float32),
-        "delta": delta,
-    }
 
