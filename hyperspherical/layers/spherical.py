@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Callable
 
 import torch
 import torch.nn as nn
@@ -18,38 +19,42 @@ class Spherical(nn.Module):
         self,
         in_features: int,
         out_features: int,
-        init_method: str | callable | None = default_,
+        init_method: str | Callable | None = default_,
         init_args: dict | None = None,
         device=None,
         dtype=None,
     ) -> None:
+        super().__init__()
         factory_kwargs = {"device": device, "dtype": dtype}
-        super(Spherical, self).__init__(**factory_kwargs)
-        self.in_features = in_features  # dimension of spheres
-        self.out_features = out_features  # number of spheres
+        self.in_features = in_features
+        self.out_features = out_features
         self.spheres = nn.Parameter(
-            torch.empty(self.out_features, self.in_features + 1, **factory_kwargs),
+            torch.empty(out_features, in_features + 1, **factory_kwargs),
             requires_grad=True,
         )
         self.init_method = init_method
-        self.init_args = init_args if init_args is not None else {}
+        self.init_args = init_args or {}
         self.initialized = False
-        self._initialize_spheres()
 
-    def _initialize_spheres(self, x: torch.Tensor) -> None:
-        """
-        Initialize the spherical layer.
-        :param x: Input tensor to determine the shape of the spheres.
-        """
+        # delta is fixed at initialization (not trainable)
+        self.register_buffer("delta", torch.tensor(1.0, **factory_kwargs))
+
+    def _initialize_spheres(self, x: Tensor) -> None:
         if self.initialized:
-            # already initialized -> warning
-            logging.warn("Spherical layer already initialized. Re-initialization skipped.")
+            logging.warning("Spherical layer already initialized. Re-initialization skipped.")
             return
-        assert callable(self.init_method)
-        res = self.init_method(self.spheres, x, **self.init_args)
-        self.initialized = res is not None
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if not callable(self.init_method):
+            raise TypeError("init_method must be callable.")
+
+        res = self.init_method(self.spheres, x, delta=self.delta, **self.init_args)
+
+        if not res:
+            raise RuntimeError("Initialization method failed.")
+
+        self.initialized = True
+
+    def forward(self, x: Tensor) -> Tensor:
         """
         Forward pass through the spherical layer.
         :param x: Input tensor of shape (batch_size, in_features).
@@ -59,4 +64,5 @@ class Spherical(nn.Module):
             self._initialize_spheres(x)
 
         x_tilde = conformal_point(x)
-        return conformal_product(self.spheres, x_tilde)
+        out = conformal_product(self.spheres, x_tilde)
+        return out / self.delta
