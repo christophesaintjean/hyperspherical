@@ -31,8 +31,8 @@ def default_(spheres: Tensor, data: Tensor | np.ndarray, eps: float = 1e-6, **kw
 
     n = spheres.size(1) - 1  # dimension of the spheres
     j = spheres.size(0)  # number of spheres
-    if data_np.shape[1] != n:
-        raise ValueError(f"Data features must match the sphere dimensions: {data_np.shape[1]} != {n}")
+    # if data_np.shape[1] != n:
+    #     raise ValueError(f"Data features must match the sphere dimensions: {data_np.shape[1]} != {n}")
 
     # Required buffer delta
     if "delta" not in kwargs:

@@ -1,7 +1,10 @@
 import torch
+import logging
+
 from torch import nn, Tensor
 from typing import Callable
 from hyperspherical.utils import conformal_filters, conformal_einf_spheres, compute_einf_tensor
+from hyperspherical.initializers import default_
 
 class Conv2dSpherical(nn.Module):
     def __init__(
@@ -10,8 +13,8 @@ class Conv2dSpherical(nn.Module):
         out_channels: int,
         kernel_size: int | tuple[int,int] = 3,
         stride: int | tuple[int,int] = 1,
-        padding: str | int | tuple[int,int] = "valid",
-        init_method: str | Callable | None = None,
+        padding: str | int | tuple[int,int] = "same",
+        init_method: str | Callable | None = default_,
         init_args: dict | None = None,
         device=None,
         dtype=None,
@@ -42,8 +45,26 @@ class Conv2dSpherical(nn.Module):
         self.initialized = False
         self.register_buffer("delta", torch.tensor(1.0, **factory_kwargs))
 
+    def _initialize_spheres(self, x: Tensor) -> None:
+        if self.initialized:
+            logging.warning("Spherical layer already initialized. Re-initialization skipped.")
+            return
+
+        if not callable(self.init_method):
+            raise TypeError("init_method must be callable.")
+
+        res = self.init_method(self.spheres, x, delta=self.delta, **self.init_args)
+
+        if not res:
+            raise RuntimeError("Initialization method failed.")
+
+        self.initialized = True
 
     def forward(self, x: Tensor) -> Tensor:
+        if not self.initialized:
+            self._initialize_spheres(x.clone().view(x.size(0), -1))
+
+
         conv_sx = torch.nn.functional.conv2d(
             input=x,
             weight=conformal_filters(self.spheres, self.in_channels, self.kernel_size),
@@ -56,4 +77,4 @@ class Conv2dSpherical(nn.Module):
             x, self.in_channels, self.kernel_size, self.stride, self.padding
         )
 
-        return out / self.delta
+        return out / self.delta**2
