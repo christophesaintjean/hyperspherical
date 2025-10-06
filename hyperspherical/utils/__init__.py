@@ -1,11 +1,17 @@
 import torch
+import torch.nn.functional as F
+from torch import Tensor
 
 __all__ = [
     "conformal_point",
     "conformal_sphere",
     "conformal_product",
     "spheres_radii",
+    "spheres_squared_radii",
     "spheres_centers",
+    "conformal_filters",
+    "conformal_einf_spheres",
+    "compute_einf_tensor"
 ]
 
 
@@ -79,3 +85,49 @@ def spheres_centers(spheres: torch.Tensor) -> torch.Tensor:
     :return: Tensor of shape (..., n) representing the center of the sphere.
     """
     return spheres[..., :-1]
+
+
+# --- functions for convolution ---
+
+def conformal_filters(spheres: Tensor, in_channels: int, kernel_size: tuple[int,int]) -> Tensor:
+    """
+    Transform a set of conformal spheres into 4D convolution filters.
+    :param spheres: Tensor of shape (out_channels, in_channels * kh * kw + 1), representing conformal spheres.
+    :param in_channels: Number of input channels for the convolution.
+    :param kernel_size: Tuple (kh, kw) representing the height and width of the convolution kernel.
+    :return: Tensor of shape (out_channels, in_channels, kh, kw) suitable as conv2d filters.
+    """
+    out_channels = spheres.shape[0]
+    return spheres[:, :-1].view(out_channels, in_channels, kernel_size[0], kernel_size[1])
+
+def conformal_einf_spheres(spheres: Tensor) -> Tensor:
+    """
+    Extract the e_infinite component of conformal spheres.
+    :param spheres: Tensor of shape (out_channels, in_channels * kh * kw + 1), representing conformal spheres.
+    :return: Tensor of shape (1, out_channels, 1, 1) containing the e_infinite components.
+    """
+    return spheres[:, -1].view(1, spheres.shape[0], 1, 1)
+
+def compute_einf_tensor(
+    x: Tensor,
+    in_channels: int,
+    kernel_size: tuple[int,int],
+    stride: tuple[int,int],
+    padding
+) -> Tensor:
+    """
+    Compute 1/2 * ||x||^2 over each convolution patch of the input tensor.
+    :param x: Input tensor of shape (batch size, in_channels, H, W).
+    :param in_channels: Number of input channels.
+    :param kernel_size: Tuple (kh, kw) representing the height and width of the convolution kernel.
+    :param stride: Tuple (sh, sw) representing the stride of the convolution.
+    :param padding: Padding used for the convolution ('valid', 'same', or integer).
+    :return: Tensor of shape (batch size, 1, H_out, W_out) representing the 1/2 * ||x||^2 for each patch.
+    """
+    x_norm = F.conv2d(
+        input=torch.square(x),
+        weight=torch.ones([1, in_channels, kernel_size[0], kernel_size[1]], device=x.device, dtype=x.dtype),
+        stride=stride,
+        padding=padding
+    )
+    return 0.5 * x_norm
